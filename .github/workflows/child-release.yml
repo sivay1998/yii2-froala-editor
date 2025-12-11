@@ -1,0 +1,36 @@
+name: Child Version Update
+
+on:
+  repository_dispatch:
+    types: [child-version-update]
+
+jobs:
+  update-child:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update composer.json
+        run: |
+          sed -i "s/${{ github.event.client_payload.old_version }}/${{ github.event.client_payload.new_version }}/g" composer.json
+
+      - name: Commit & Push
+        run: |
+          git config --global user.email github-actions@github.com
+          git config --global user.name github-actions
+          git add composer.json
+          git commit -m "Child repo version bump"
+          git push
+
+      - name: Create Tag & Release
+        run: |
+          TAG="v${{ github.event.client_payload.new_version }}"
+          git tag $TAG
+          git push origin $TAG
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.event.client_payload.new_version }}
+          body: "Auto release triggered by parent repository"
